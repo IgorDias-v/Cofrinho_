@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Icon } from "@/components/Icon";
-import { BackTitle, CARD_BG, CardArt, CardDots, CircleButton, Empty, Hero, Main, Money, Panel, Pill, Row, SectionHead, Ticks, TopBar, cx } from "@/components/ui";
+import { BackTitle, CardArt, CardSwatch, CircleButton, Empty, Hero, Main, Money, Panel, Pill, Row, SectionHead, Ticks, TopBar, cx } from "@/components/ui";
 import { MerchantIcon } from "@/components/Merchant";
 import { CATEGORIES } from "@/lib/data";
 import { brl, relativeDay } from "@/lib/format";
@@ -69,15 +69,16 @@ export function Cartoes() {
                         opacity: 1 - depth * 0.12,
                       }}
                     >
-                      <CardArt color={c.color} last4={c.last4} className="h-full rounded-[28px]">
+                      {/* mesma definição do protótipo (Home): número em cima, apelido + valor embaixo */}
+                      <CardArt color={c.color} digits={false} art="blobs" className="h-full rounded-[28px]">
                         <span className="flex h-full flex-col justify-between px-5 py-[18px]">
-                          <span className="flex items-center gap-2.5"><CardDots /><span className="text-[15px] font-medium">{c.nickname}</span></span>
-                          <span className="flex items-end justify-between">
+                          <span className={cx("self-end text-[15px] tracking-wide", c.color !== "lima" && "[text-shadow:0_1px_10px_rgba(0,0,0,.35)]")}>****{c.last4}</span>
+                          <span className="flex items-end justify-between gap-3">
                             <span>
-                              <span className="block text-xs opacity-85">Fatura atual</span>
+                              <span className="block text-[13px]">{c.nickname} · Fatura atual</span>
                               <span className="num block text-[30px] leading-tight"><Money value={c.fatura} hidden={hidden} mask="R$ ••••" /></span>
                             </span>
-                            <span className="text-xs opacity-85">Vence em {c.dueInDays} dias</span>
+                            <span className="pb-1.5 text-xs">Vence em {c.dueInDays} dias</span>
                           </span>
                         </span>
                       </CardArt>
@@ -128,7 +129,7 @@ export function Cartoes() {
                   onClick={() => { bringToFront(c.id); window.scrollTo({ top: 0, behavior: "smooth" }); }}
                   className="-mx-2 flex w-[calc(100%+16px)] items-center gap-3.5 rounded-2xl px-2 py-2.5 text-left transition hover:bg-white/[.04] md:py-3"
                 >
-                  <span className={cx("size-11 flex-none rounded-xl", CARD_BG[c.color])} aria-hidden="true" />
+                  <CardSwatch color={c.color} className="size-11 flex-none rounded-xl" />
                   <span className="min-w-0">
                     <span className="block truncate text-[15px]">{c.nickname}</span>
                     <span className="mt-0.5 block text-[13px] text-esk-muted">Vence em {c.dueInDays} dias · {c.used}%</span>

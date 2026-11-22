@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Icon } from "@/components/Icon";
-import { Chips, Field, PrimaryButton, SheetFrame, cx, inputClass } from "@/components/ui";
+import { CardSwatch, Chips, Field, PrimaryButton, SheetFrame, cx, inputClass } from "@/components/ui";
 import { CATEGORIES, CATEGORY_ORDER } from "@/lib/data";
 import { brl, money, parseMoney, toDateInput } from "@/lib/format";
 import { newId, useStore } from "@/lib/store";
@@ -278,7 +278,9 @@ function CartaoSheet({ cardId, onClose }: { cardId?: string; onClose: () => void
           <div className="flex gap-3">
             {(["lima", "ciano", "menta"] as const).map((c) => (
               <button key={c} type="button" aria-label={{ lima: "Arte lima", ciano: "Arte iridescente", menta: "Arte aurora" }[c]} aria-pressed={color === c} onClick={() => setColor(c)}
-                className={cx("size-12 rounded-full ring-offset-2 ring-offset-esk-sheet transition", { lima: "art-lime", ciano: "art-iris", menta: "art-aurora" }[c], color === c && "ring-2 ring-white")} />
+                className={cx("size-12 rounded-full ring-offset-2 ring-offset-esk-sheet transition", color === c && "ring-2 ring-white")}>
+                <CardSwatch color={c} className="size-full rounded-full" />
+              </button>
             ))}
           </div>
         </fieldset>

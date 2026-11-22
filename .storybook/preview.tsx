@@ -1,17 +1,17 @@
 import type { Preview } from "@storybook/nextjs-vite";
-import { Inter, Inter_Tight } from "next/font/google";
+import { Bricolage_Grotesque, Inter } from "next/font/google";
 import "../app/globals.css";
 import "../design-tokens/tokens.css";
 import { cofrinhoTheme } from "./theme";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" });
-const interTight = Inter_Tight({ subsets: ["latin"], variable: "--font-inter-tight", display: "swap" });
+const bricolage = Bricolage_Grotesque({ subsets: ["latin"], variable: "--font-bricolage", display: "swap" });
 
 const preview: Preview = {
   tags: ["autodocs"],
   decorators: [
     (Story) => (
-      <div className={`${inter.variable} ${interTight.variable} font-sans text-esk-text antialiased`}>
+      <div className={`${inter.variable} ${bricolage.variable} font-sans text-esk-text antialiased`}>
         <Story />
       </div>
     ),

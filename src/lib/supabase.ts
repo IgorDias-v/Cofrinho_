@@ -3,6 +3,7 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "./database.types";
 import { env, hasSupabase } from "./env";
+import { sessionStorageAdapter } from "./remember";
 
 /**
  * Cliente do Supabase no navegador (chave pública). As regras de acesso (RLS) garantem
@@ -14,7 +15,7 @@ let client: SupabaseClient<Database> | null = null;
 export function supabase(): SupabaseClient<Database> {
   if (!hasSupabase) throw new Error("Supabase não configurado (.env).");
   client ??= createClient<Database>(env.supabaseUrl, env.supabaseAnonKey, {
-    auth: { persistSession: true, autoRefreshToken: true, storageKey: "cofrinho:auth" },
+    auth: { persistSession: true, autoRefreshToken: true, storageKey: "cofrinho:auth", storage: sessionStorageAdapter },
   });
   return client;
 }

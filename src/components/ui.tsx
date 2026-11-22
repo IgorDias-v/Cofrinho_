@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { Logo } from "./Logo";
 import { Icon } from "./Icon";
 import { Tile } from "./Tile";
 import { useStore } from "@/lib/store";
@@ -99,16 +100,13 @@ export function Hero({ children, className }: { children: React.ReactNode; class
   );
 }
 
-/** Linha do topo: esquerda + título, nav no meio (desktop), ação à direita. */
+/** Linha do topo: esquerda + título, ação à direita. A navegação fica na barra de baixo (celular e desktop). */
 export function TopBar({ left, title, right }: { left: React.ReactNode; title?: React.ReactNode; right?: React.ReactNode }) {
   return (
     <div className="flex items-center gap-3.5">
       {left}
       {title}
-      <div className="mx-auto hidden md:block">
-        <DesktopNav />
-      </div>
-      <div className="ml-auto md:ml-0">{right}</div>
+      <div className="ml-auto">{right}</div>
     </div>
   );
 }
@@ -125,7 +123,7 @@ export function BackTitle({ title }: { title: string }) {
 
 export function Main({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
-    <main className={cx("mx-auto max-w-[1200px] px-5 pb-36 pt-7 md:px-8 md:pb-16 md:pt-10", className)}>{children}</main>
+    <main className={cx("mx-auto max-w-[1200px] px-5 pb-36 pt-7 md:px-8 md:pb-36 md:pt-10", className)}>{children}</main>
   );
 }
 
@@ -323,9 +321,77 @@ export const CARD_ART: Record<Card["color"], { art: string; ink: string; veil: s
 /** Compatibilidade: miniatura/ícone com a arte do cartão. */
 export const CARD_BG: Record<Card["color"], string> = { ciano: "art-iris text-white", menta: "art-aurora text-esk-paper", lima: "art-lime text-esk-ink" };
 
-/** Fundo de arte + véu para leitura + dígitos finais em contorno. */
-export function CardArt({ color, last4, digits = "right", className, children }: { color: Card["color"]; last4?: string; digits?: "right" | "left" | false; className?: string; children: React.ReactNode }) {
+/**
+ * Arte "blobs" do protótipo (Figma · Home mobile 4016:4930): degradê de base + manchas desfocadas.
+ * Posições em % de um cartão de 188×236; o tamanho segue a largura do cartão.
+ */
+const CARD_BLOBS: Record<Card["color"], { base: string; blobs: { x: number; y: number; w: number; c: string; o: number; blur: number }[] }> = {
+  ciano: {
+    base: "linear-gradient(135deg, #3b2dff, #8c5bff 50%, #21b3ff)",
+    blobs: [
+      { x: 9, y: 12, w: 142, c: "#c9b6ff", o: 1, blur: 40 },
+      { x: 103, y: 24, w: 130, c: "#6ec8ff", o: 0.9, blur: 36 },
+      { x: 38, y: 142, w: 142, c: "#ff8fd8", o: 0.9, blur: 40 },
+    ],
+  },
+  menta: {
+    base: "linear-gradient(135deg, #1c1c1e, #121212 50%, #0a0a0a)",
+    blobs: [
+      { x: 103, y: -12, w: 130, c: "#d9f59b", o: 1, blur: 36 },
+      { x: -19, y: 130, w: 153, c: "#8c5bff", o: 1, blur: 43 },
+    ],
+  },
+  lima: {
+    base: "linear-gradient(135deg, #d9f59b, #9be36b 50%, #2e7d5b)",
+    blobs: [
+      { x: 94, y: -12, w: 118, c: "#f4ffd6", o: 0.9, blur: 33 },
+      { x: -9, y: 106, w: 142, c: "#62f2bc", o: 1, blur: 40 },
+    ],
+  },
+};
+
+function BlobArt({ color, blurScale = 1, still }: { color: Card["color"]; blurScale?: number; still?: boolean }) {
+  const a = CARD_BLOBS[color];
+  return (
+    <span aria-hidden="true" className="absolute inset-0" style={{ background: a.base }}>
+      {a.blobs.map((b, i) => (
+        <span
+          key={i}
+          className={cx("absolute aspect-square rounded-full", !still && "anim-blob")}
+          style={{
+            left: `${(b.x / 188) * 100}%`,
+            top: `${(b.y / 236) * 100}%`,
+            width: `${(b.w / 188) * 100}%`,
+            background: b.c,
+            opacity: b.o,
+            filter: `blur(${b.blur * blurScale}px)`,
+            animationDelay: `${i * -3}s`,
+          }}
+        />
+      ))}
+    </span>
+  );
+}
+
+/** Miniatura com a arte do cartão (listas, seletor de cor). */
+export function CardSwatch({ color, className }: { color: Card["color"]; className?: string }) {
+  return (
+    <span aria-hidden="true" className={cx("relative block overflow-hidden", className)}>
+      <BlobArt color={color} blurScale={0.25} still />
+    </span>
+  );
+}
+
+/** Fundo de arte + véu para leitura + dígitos finais em contorno. `art="blobs"` usa a arte do protótipo, sem véu. */
+export function CardArt({ color, last4, digits = "right", art = "flow", className, children }: { color: Card["color"]; last4?: string; digits?: "right" | "left" | false; art?: "flow" | "blobs"; className?: string; children: React.ReactNode }) {
   const a = CARD_ART[color];
+  if (art === "blobs")
+    return (
+      <span className={cx("relative block overflow-hidden", a.ink, className)}>
+        <BlobArt color={color} />
+        <span className="relative block h-full">{children}</span>
+      </span>
+    );
   return (
     <span className={cx("relative block overflow-hidden", a.ink, className)}>
       <span aria-hidden="true" className={cx("absolute inset-0", a.art)} />
@@ -370,14 +436,21 @@ const NAV: { view: View; icon: string; label: string; plus?: boolean }[] = [
 /** Objetivos é uma tela de Metas: a aba Metas fica ativa nas duas. */
 const navActive = (view: View): View => (view === "objetivos" ? "metas" : view);
 
-/** Barra flutuante (celular): vidro fosco, item ativo em círculo branco, Assistente em lima. */
+/**
+ * Barra flutuante, fixa embaixo (Figma · Home mobile 4016:4896 e desktop 4016:5938).
+ * Celular: só ícones, ocupa a largura. Desktop: pílula centralizada com rótulos.
+ * Item ativo em papel, Assistente em lima.
+ */
 export function BottomNav() {
   const { view: raw, go, plus } = useStore();
   const view = navActive(raw);
   if (view === "assistente" || view === "fatura") return null;
   return (
-    <nav aria-label="Principal" className="fixed inset-x-5 bottom-5 z-30 flex items-center gap-2.5 md:hidden">
-      <div className="flex h-16 flex-1 items-center justify-around rounded-full border border-esk-track bg-[rgba(24,24,24,.88)] px-2 shadow-[0_12px_36px_rgba(0,0,0,.55)] backdrop-blur-xl">
+    <nav
+      aria-label="Principal"
+      className="fixed inset-x-5 bottom-5 z-30 flex items-center gap-2.5 md:inset-x-auto md:bottom-6 md:left-1/2 md:-translate-x-1/2"
+    >
+      <div className="flex h-16 flex-1 items-center justify-around rounded-full border border-esk-track bg-[rgba(24,24,24,.88)] px-2 shadow-[0_12px_36px_rgba(0,0,0,.55)] backdrop-blur-xl md:h-14 md:flex-none md:justify-start md:gap-1 md:px-1.5">
         {NAV.filter((n) => plus || !n.plus).map((n) => (
           <button
             key={n.view}
@@ -386,11 +459,12 @@ export function BottomNav() {
             aria-current={view === n.view ? "page" : undefined}
             onClick={() => go(n.view)}
             className={cx(
-              "flex size-12 items-center justify-center rounded-full transition duration-300",
+              "flex size-12 items-center justify-center gap-2 rounded-full transition duration-300 md:h-11 md:w-auto md:px-4 md:text-[15px]",
               view === n.view ? "bg-esk-paper text-esk-ink" : "text-esk-muted hover:text-white",
             )}
           >
             <Icon name={n.icon} size={20} />
+            <span className="hidden md:inline">{n.label}</span>
           </button>
         ))}
       </div>
@@ -399,12 +473,23 @@ export function BottomNav() {
           type="button"
           aria-label="Assistente"
           onClick={() => go("assistente")}
-          className="flex size-16 items-center justify-center rounded-full bg-esk-lima text-esk-ink shadow-[0_10px_30px_rgba(217,245,155,.25)]"
+          className="flex size-16 items-center justify-center rounded-full bg-esk-lima text-esk-ink shadow-[0_10px_30px_rgba(217,245,155,.25)] transition hover:scale-105 md:size-14"
         >
           <Icon name="sparkles" size={24} />
         </button>
       )}
     </nav>
+  );
+}
+
+/** Marca no topo: porquinho em traço + nome, como no protótipo. */
+export function BrandMark({ className }: { className?: string }) {
+  return (
+    // o desenho tem ~8px de respiro dentro do próprio SVG: sem gap, o espaço visível até o texto fica em 8px
+    <span className={cx("flex items-center gap-0 text-esk-ink", className)}>
+      <Logo size={52} tile="none" ink="#0A0A0A" title="" />
+      <span className="text-[15px] font-semibold">CoFrinho</span>
+    </span>
   );
 }
 

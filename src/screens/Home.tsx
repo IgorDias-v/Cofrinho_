@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Icon } from "@/components/Icon";
-import { BigBalance, CardArt, CardDots, Empty, Hero, Main, Money, Panel, Pill, Row, SectionHead, TopBar, cx } from "@/components/ui";
+import { BigBalance, BrandMark, CardArt, Empty, Hero, Main, Money, Panel, Pill, Row, SectionHead, cx } from "@/components/ui";
 import { MerchantIcon } from "@/components/Merchant";
 import { CATEGORIES } from "@/lib/data";
 import { brl, money, monthLong, relativeDay } from "@/lib/format";
@@ -60,33 +60,40 @@ export function Home() {
 
   return (
     <>
-      <Hero className="gap-[22px]">
-        <TopBar
-          left={
-            <button type="button" onClick={() => openSheet({ kind: "conta" })} className="flex items-center gap-3 text-left" aria-label="Abrir conta">
-              <span className="flex size-[42px] items-center justify-center rounded-full bg-esk-ink text-base font-bold text-esk-lima">
-                {state.user.name[0]?.toUpperCase()}
-              </span>
-              <span className="leading-tight">
-                <span className="block text-[13px] text-esk-paper-muted">{greeting(d.now.getHours())}</span>
-                <span className="block text-[15px] font-semibold">{state.user.name}</span>
-              </span>
-            </button>
-          }
-          right={
-            <div className="flex gap-0.5">
-              <IconGhost icon={hidden ? "eyeOff" : "eye"} label={hidden ? "Mostrar saldo" : "Ocultar saldo"} onClick={() => dispatch({ type: "hidden/toggle" })} />
-              {plus && <IconGhost icon="sparkles" label="Abrir assistente" onClick={() => go("assistente")} className="md:hidden" />}
-            </div>
-          }
-        />
+      <Hero className="gap-[22px] md:gap-10">
+        {/* celular: marca centralizada no topo, como no protótipo */}
+        <div className="flex justify-center md:hidden">
+          <BrandMark />
+        </div>
+
+        <div className="flex items-center gap-3.5">
+          <BrandMark className="hidden md:flex" />
+          <button
+            type="button"
+            onClick={() => openSheet({ kind: "conta" })}
+            className="flex items-center gap-2.5 text-left md:order-last md:ml-auto"
+            aria-label="Abrir conta"
+          >
+            <span className="flex size-9 items-center justify-center rounded-full bg-esk-ink text-sm font-bold text-esk-lima">
+              {state.user.name[0]?.toUpperCase()}
+            </span>
+            <span className="leading-tight">
+              <span className="block text-[13px] text-esk-paper-muted">{greeting(d.now.getHours())}</span>
+              <span className="block text-[15px] font-semibold">{state.user.name}</span>
+            </span>
+          </button>
+          <IconGhost icon={hidden ? "eyeOff" : "eye"} label={hidden ? "Mostrar saldo" : "Ocultar saldo"} onClick={() => dispatch({ type: "hidden/toggle" })} className="ml-auto md:hidden" />
+        </div>
 
         <div className="flex flex-col gap-[22px] md:flex-row md:items-end md:justify-between md:gap-10">
           <div>
-            <p className="mb-1.5 text-sm text-esk-paper-muted">Saldo total</p>
-            <BigBalance value={d.balance} hidden={hidden} className="text-[44px] md:text-[clamp(56px,6vw,88px)]" />
+            <p className="mb-1.5 text-sm text-esk-paper-muted md:mb-3 md:text-[15px]">Saldo total</p>
+            <div className="flex items-center gap-4">
+              <BigBalance value={d.balance} hidden={hidden} className="text-[44px] md:text-[clamp(64px,7vw,96px)]" />
+              <IconGhost icon={hidden ? "eyeOff" : "eye"} label={hidden ? "Mostrar saldo" : "Ocultar saldo"} onClick={() => dispatch({ type: "hidden/toggle" })} className="hidden md:flex md:size-12" />
+            </div>
           </div>
-          <nav aria-label="Atalhos" className="anim-screen flex flex-wrap gap-2.5" style={{ animationDelay: "420ms" }}>
+          <nav aria-label="Atalhos" className="anim-screen flex flex-wrap gap-2.5 md:mb-1" style={{ animationDelay: "420ms" }}>
             <Pill icon="plus" label="Adicionar" onClick={() => openSheet({ kind: "adicionar" })} />
             {plus && <Pill icon="down" label="Fatura" onClick={() => go("fatura")} />}
             <Pill icon="target" ariaLabel="Metas" onClick={() => go("metas")} />
@@ -116,15 +123,18 @@ export function Home() {
                 onClick={() => go("cartoes")}
                 className="h-[236px] w-[188px] flex-none snap-start rounded-[26px] text-left transition duration-300 hover:-translate-y-1.5 hover:-rotate-1 hover:shadow-[0_18px_40px_rgba(0,0,0,.45)] md:h-[220px] md:w-auto md:min-w-[220px] md:flex-1"
               >
-                <CardArt color={c.color} last4={c.last4} digits="left" className="h-full rounded-[26px]">
-                  <span className="flex h-full flex-col justify-between p-4">
-                    <span className="flex items-center gap-2"><CardDots /><span className="text-sm font-medium">{c.nickname}</span></span>
-                    <span className="flex items-end justify-between">
+                {/* Figma · Home mobile 4016:4930 — número em cima, apelido + valor embaixo, prazo à direita */}
+                <CardArt color={c.color} digits={false} art="blobs" className="h-full rounded-[26px]">
+                  <span className="flex h-full flex-col justify-between p-[18px] md:p-5">
+                    <span className={cx("self-end text-sm tracking-wide", c.color !== "lima" && "[text-shadow:0_1px_10px_rgba(0,0,0,.35)]")}>****{c.last4}</span>
+                    <span className="flex items-end justify-between gap-3">
                       <span>
-                        <span className="block text-xs opacity-85">Fatura aberta</span>
-                        <span className="num block text-[22px]"><Money value={c.fatura} hidden={hidden} format={(v) => `R$ ${money(v)}`} mask="R$ ••••" /></span>
+                        <span className="block text-xs">{c.nickname}</span>
+                        <span className="num block text-xl md:text-[26px]">
+                          <Money value={c.fatura} hidden={hidden} format={(v) => `R$ ${v % 1 ? money(v) : Math.round(v).toLocaleString("pt-BR")}`} mask="R$ ••••" />
+                        </span>
                       </span>
-                      <span className="text-[11px] opacity-85">{c.dueInDays} dias</span>
+                      <span className="pb-1 text-xs">{c.dueInDays} dias</span>
                     </span>
                   </span>
                 </CardArt>
