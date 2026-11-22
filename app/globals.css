@@ -1,0 +1,245 @@
+@import "tailwindcss";
+
+/* Design tokens do Cofrinho — use as classes geradas: bg-esk-brand, text-esk-muted… */
+@theme {
+  --breakpoint-md: 50rem;    /* ~800px: vira desktop */
+  --breakpoint-lg: 68.75rem; /* ~1100px */
+
+  --font-sans: var(--font-inter), system-ui, sans-serif;
+  --font-display: var(--font-inter-tight), var(--font-inter), system-ui, sans-serif;
+
+  /* V2 — topo claro (papel) + conteúdo escuro */
+  --color-esk-paper: #f5f5f3;      /* topo claro, balões do usuário, item ativo */
+  --color-esk-paper-2: #e6e6e2;    /* trilhos no claro */
+  --color-esk-paper-muted: #6b6b6b;/* texto secundário no claro (AA sobre papel) */
+
+  --color-esk-bg: #0a0a0a;
+  --color-esk-panel: #121212;
+  --color-esk-surface: #161616;
+  --color-esk-sheet: #121212;
+  --color-esk-nav: #161616;
+  --color-esk-row: #1c1c1c;
+  --color-esk-active: #2a2a2a;
+  --color-esk-border: #222222;
+  --color-esk-track: #2a2a2a;
+
+  --color-esk-brand: #0a0a0a;      /* ação principal no claro = tinta */
+  --color-esk-lima: #d9f59b;       /* acento: assistente, positivo, seleção */
+  --color-esk-ciano: #21b3ff;
+  --color-esk-menta: #62f2bc;
+  --color-esk-violet: #8c5bff;
+  --color-esk-coral: #ff3b1f;
+  --color-esk-orange: #ff9a3c;
+  --color-esk-link: #d9f59b;
+
+  --color-esk-text: #ffffff;
+  --color-esk-soft: #ffffff;
+  --color-esk-label: #8a8a8a;
+  --color-esk-muted: #8a8a8a;
+  --color-esk-ink: #0a0a0a;
+}
+
+@utility num {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+@utility display {
+  font-family: var(--font-display);
+  letter-spacing: -0.02em;
+}
+
+/* Artes dos cartões (CSS puro), com fluxo lento */
+@utility art-iris {
+  background-image: radial-gradient(circle at 20% 25%, #c9b6ff 0, transparent 38%), radial-gradient(circle at 80% 30%, #6ec8ff 0, transparent 40%), radial-gradient(circle at 40% 80%, #ff8fd8 0, transparent 42%), linear-gradient(135deg, #3b2dff, #8c5bff 45%, #21b3ff);
+  background-size: 220% 220%;
+  animation: drift 9s ease-in-out infinite alternate;
+}
+/* Aurora escura: grafite com brilho lima e lilás (cartão Salário) */
+@utility art-aurora {
+  background-image: radial-gradient(circle at 78% 22%, rgba(217, 245, 155, 0.85) 0, transparent 38%), radial-gradient(circle at 18% 85%, rgba(140, 91, 255, 0.75) 0, transparent 45%), linear-gradient(150deg, #1c1c1e, #0a0a0a 70%);
+  background-size: 220% 220%;
+  animation: drift 11s ease-in-out infinite alternate;
+}
+@utility art-lime {
+  background-image: radial-gradient(circle at 70% 20%, #f4ffd6 0, transparent 35%), radial-gradient(circle at 20% 70%, #62f2bc 0, transparent 45%), linear-gradient(160deg, #d9f59b, #9be36b 55%, #2e7d5b);
+  background-size: 220% 220%;
+  animation: drift 10s ease-in-out infinite alternate;
+}
+/* dígitos finais em contorno sobre a arte */
+@utility outline-digits {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  color: transparent;
+  -webkit-text-stroke: 1.4px rgba(255, 255, 255, 0.85);
+}
+
+@utility kicker {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-esk-label);
+  font-stretch: 80%;
+}
+
+@layer base {
+  html,
+  body {
+    background: var(--color-esk-bg);
+    color: var(--color-esk-text);
+  }
+  body {
+    -webkit-font-smoothing: antialiased;
+  }
+  button {
+    cursor: pointer;
+  }
+  /* microinteração: botão "afunda" de leve ao toque */
+  button,
+  a {
+    transition-property: color, background-color, border-color, opacity, box-shadow, transform, filter;
+    transition-duration: 0.15s;
+  }
+  button:not(:disabled):active,
+  a:active {
+    transform: scale(0.97);
+  }
+  /* contorno de foco visível no claro (tinta) e no escuro (branco) */
+  :focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 3px;
+  }
+}
+
+@keyframes drift {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 100% 50%; }
+}
+@keyframes grow {
+  from { transform: scaleY(0); }
+  to { transform: scaleY(1); }
+}
+@keyframes digit {
+  from { opacity: 0; transform: translateY(60%); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes orb {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+}
+@utility anim-grow {
+  transform-origin: bottom;
+  animation: grow 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@utility anim-digit {
+  display: inline-block;
+  white-space: pre;
+  animation: digit 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@utility anim-orb {
+  animation: orb 3s ease-in-out infinite;
+}
+
+@keyframes sheet-up {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+@keyframes pop-in {
+  from { opacity: 0; transform: translateY(12px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes rise {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes sheet-down {
+  from { transform: translateY(0); }
+  to { transform: translateY(100%); }
+}
+@keyframes pop-out {
+  from { opacity: 1; transform: none; }
+  to { opacity: 0; transform: translateY(12px) scale(0.98); }
+}
+@keyframes fade-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+@keyframes check-pop {
+  0% { transform: scale(0.4); opacity: 0; }
+  60% { transform: scale(1.15); opacity: 1; }
+  100% { transform: scale(1); }
+}
+@keyframes shimmer {
+  from { background-position: -200% 0; }
+  to { background-position: 200% 0; }
+}
+@keyframes blink {
+  0%, 80%, 100% { opacity: 0.25; }
+  40% { opacity: 1; }
+}
+
+@utility anim-sheet {
+  animation: sheet-up 0.32s cubic-bezier(0.2, 0.8, 0.2, 1);
+  @media (width >= 50rem) {
+    animation: pop-in 0.24s ease-out;
+  }
+}
+@utility anim-sheet-out {
+  animation: sheet-down 0.22s ease-in forwards;
+  @media (width >= 50rem) {
+    animation: pop-out 0.18s ease-in forwards;
+  }
+}
+@utility anim-fade {
+  animation: fade-in 0.2s ease-out;
+}
+@utility anim-fade-out {
+  animation: fade-out 0.2s ease-in forwards;
+}
+/* troca de tela: sobe e aparece */
+@utility anim-screen {
+  animation: rise 0.32s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+@utility anim-check {
+  animation: check-pop 0.45s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+/* brilho correndo (leitura da fatura) */
+@utility shimmer {
+  background-image: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.45) 50%, transparent 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+/* filhos entram em sequência */
+@utility stagger {
+  & > * {
+    animation: rise 0.36s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  }
+  & > *:nth-child(2) { animation-delay: 40ms; }
+  & > *:nth-child(3) { animation-delay: 80ms; }
+  & > *:nth-child(4) { animation-delay: 120ms; }
+  & > *:nth-child(5) { animation-delay: 160ms; }
+  & > *:nth-child(6) { animation-delay: 200ms; }
+  & > *:nth-child(7) { animation-delay: 240ms; }
+  & > *:nth-child(n + 8) { animation-delay: 280ms; }
+}
+@utility anim-pop {
+  animation: pop-in 0.28s ease-out;
+}
+@utility dot-blink {
+  animation: blink 1.2s infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

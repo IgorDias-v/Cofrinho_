@@ -1,0 +1,256 @@
+// Cofrinho — DOCUMENTAÇÃO do banco em Prisma (espelha supabase/migrations/*.sql)
+//
+// - O app NÃO usa Prisma: o front fala com o banco pelo supabase-js (PostgREST), com Row Level Security.
+// - A fonte da verdade são as migrations SQL em supabase/migrations/. Não rode `prisma migrate` nem `prisma db push`.
+// - Se um dia usar o Prisma Client, ele conecta como DONO do banco (postgres) e IGNORA o RLS:
+//   use só no servidor e sempre filtre por user_id na mão.
+// - O Prisma não está instalado (package.json não foi alterado). Sintaxe do Prisma 6 (url/directUrl no datasource;
+//   no Prisma 7 a URL vai para prisma.config.ts). Validar sem instalar: `npx prisma@6 validate` (baixa o CLI temporariamente).
+//
+// O que o Prisma não consegue expressar (está só no SQL):
+// - FKs compostas (card_id, user_id) com `ON DELETE SET NULL (card_id)` (Postgres 15+): aqui aparecem como
+//   onDelete: NoAction (o Prisma não aceita SetNull quando user_id é obrigatório). No banco, apagar o cartão/importação
+//   zera só card_id/import_id; user_id fica. Não confie no Prisma para esse comportamento: ele é do Postgres.
+// - Checks (last4 com 4 dígitos, amount > 0, cap >= 0, tamanhos de texto, method = 'card' ⇔ card_id não nulo,
+//   file_path começando por user_id, size_bytes <= 15 MB).
+// - Índice único funcional cards (user_id, lower(btrim(nickname))) e índices parciais.
+// - Triggers (on_auth_user_created, updated_at, cartão apagado → método 'dinheiro'), policies RLS e funções RPC.
+// - FKs para auth.users (schema auth, gerido pelo Supabase): o model AuthUser abaixo é só uma referência mínima.
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["multiSchema"]
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL") // pooler (Supavisor, porta 6543)
+  directUrl = env("DIRECT_URL")   // conexão direta (porta 5432)
+  schemas   = ["public", "auth"]
+}
+
+/* ───────────── Enums ───────────── */
+
+enum Category {
+  moradia
+  alimentacao
+  transporte
+  lazer
+  assinaturas
+  outros
+
+  @@map("category")
+  @@schema("public")
+}
+
+enum PaymentMethod {
+  pix
+  dinheiro
+  card
+
+  @@map("payment_method")
+  @@schema("public")
+}
+
+enum CardColor {
+  ciano
+  lima
+  menta
+
+  @@map("card_color")
+  @@schema("public")
+}
+
+enum TxSource {
+  manual
+  fatura
+
+  @@map("tx_source")
+  @@schema("public")
+}
+
+enum GoalIcon {
+  plane
+  shield
+  book
+  car
+  target
+
+  @@map("goal_icon")
+  @@schema("public")
+}
+
+enum ImportStatus {
+  enviada
+  lida
+  importada
+  erro
+
+  @@map("import_status")
+  @@schema("public")
+}
+
+/* ───────────── auth.users (referência mínima, gerida pelo Supabase Auth) ───────────── */
+
+model AuthUser {
+  id    String  @id @db.Uuid
+  email String? @db.VarChar(255)
+
+  profile        Profile?
+  cards          Card[]
+  transactions   Transaction[]
+  budgets        Budget[]
+  goals          Goal[]
+  goalMovements  GoalMovement[]
+  invoiceImports InvoiceImport[]
+
+  @@map("users")
+  @@schema("auth")
+}
+
+/* ───────────── public ───────────── */
+
+/// 1 por usuário. Criado pelo trigger on_auth_user_created. Sem delete pelo app (some com a conta).
+model Profile {
+  id             String   @id @db.Uuid
+  name           String   @default("") // até 40 caracteres
+  monthCap       Decimal  @default(0) @map("month_cap") @db.Decimal(12, 2) // 0 = sem teto do mês
+  hideBalance    Boolean  @default(false) @map("hide_balance")
+  openingBalance Decimal  @default(0) @map("opening_balance") @db.Decimal(12, 2)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  user AuthUser @relation(fields: [id], references: [id], onDelete: Cascade)
+
+  @@map("profiles")
+  @@schema("public")
+}
+
+model Card {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId      String    @map("user_id") @db.Uuid
+  nickname    String // 1–20, único por usuário sem diferenciar maiúsculas
+  last4       String // 4 dígitos
+  color       CardColor @default(ciano)
+  limit       Decimal   @map("credit_limit") @db.Decimal(12, 2) // "limit" no front
+  faturaBase  Decimal   @default(0) @map("fatura_base") @db.Decimal(12, 2)
+  dueInDays   Int       @default(10) @map("due_in_days") @db.SmallInt // 1–60
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime  @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  user           AuthUser        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions   Transaction[]
+  invoiceImports InvoiceImport[]
+
+  @@unique([id, userId], map: "cards_id_user_key")
+  @@map("cards")
+  @@schema("public")
+}
+
+/// Fatura enviada (arquivo no bucket privado "faturas", caminho {user_id}/...).
+model InvoiceImport {
+  id           String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId       String       @map("user_id") @db.Uuid
+  cardId       String?      @map("card_id") @db.Uuid
+  filePath     String       @unique @map("file_path")
+  fileName     String       @map("file_name")
+  mimeType     String       @map("mime_type") // application/pdf ou image/*
+  sizeBytes    Int          @map("size_bytes") // 1 byte a 15 MB
+  status       ImportStatus @default(enviada)
+  total        Decimal?     @db.Decimal(12, 2)
+  dueInDays    Int?         @map("due_in_days") @db.SmallInt
+  itemsCount   Int          @default(0) @map("items_count")
+  errorMessage String?      @map("error_message")
+  createdAt    DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime     @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  user         AuthUser      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  card         Card?         @relation(fields: [cardId, userId], references: [id, userId], onDelete: NoAction, onUpdate: NoAction, map: "invoice_imports_card_fkey") // SQL: ON DELETE SET NULL (card_id)
+  transactions Transaction[]
+
+  @@unique([id, userId], map: "invoice_imports_id_user_key")
+  @@index([userId, createdAt(sort: Desc)], map: "invoice_imports_user_created_idx")
+  @@index([cardId, userId], map: "invoice_imports_card_idx") // parcial no SQL: where card_id is not null
+  @@map("invoice_imports")
+  @@schema("public")
+}
+
+model Transaction {
+  id        String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String        @map("user_id") @db.Uuid
+  name      String // 1–40
+  category  Category
+  method    PaymentMethod // no front: "pix" | "dinheiro" | id do cartão (method = card + card_id)
+  cardId    String?       @map("card_id") @db.Uuid
+  amount    Decimal       @db.Decimal(12, 2) // > 0
+  income    Boolean       @default(false)
+  source    TxSource      @default(manual)
+  date      DateTime      @default(now()) @db.Timestamptz(6)
+  importId  String?       @map("import_id") @db.Uuid
+  createdAt DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime      @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  user          AuthUser       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  card          Card?          @relation(fields: [cardId, userId], references: [id, userId], onDelete: NoAction, onUpdate: NoAction, map: "transactions_card_fkey") // SQL: ON DELETE SET NULL (card_id) + trigger → dinheiro
+  invoiceImport InvoiceImport? @relation(fields: [importId, userId], references: [id, userId], onDelete: NoAction, onUpdate: NoAction, map: "transactions_import_fkey") // SQL: ON DELETE SET NULL (import_id)
+
+  @@index([userId, date(sort: Desc)], map: "transactions_user_date_idx")
+  @@index([cardId, userId], map: "transactions_card_idx")     // parcial no SQL
+  @@index([importId, userId], map: "transactions_import_idx") // parcial no SQL
+  @@map("transactions")
+  @@schema("public")
+}
+
+/// Teto por categoria. cap 0 = sem teto.
+model Budget {
+  userId    String   @map("user_id") @db.Uuid
+  category  Category
+  cap       Decimal  @db.Decimal(12, 2)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  user AuthUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, category])
+  @@map("budgets")
+  @@schema("public")
+}
+
+model Goal {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  name      String // 1–30
+  saved     Decimal  @default(0) @db.Decimal(12, 2) // >= 0, mantido pelas RPCs
+  target    Decimal  @db.Decimal(12, 2) // > 0
+  due       String? // texto livre, até 20 ("Dez 2027")
+  icon      GoalIcon @default(target)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  user      AuthUser       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  movements GoalMovement[]
+
+  @@unique([id, userId], map: "goals_id_user_key")
+  @@index([userId, createdAt], map: "goals_user_idx")
+  @@map("goals")
+  @@schema("public")
+}
+
+/// amount > 0 = guardou (sai do saldo) · amount < 0 = retirou. Escrever via rpc save_goal_movement / delete_goal_movement.
+model GoalMovement {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  goalId    String   @map("goal_id") @db.Uuid
+  amount    Decimal  @db.Decimal(12, 2) // <> 0
+  date      DateTime @default(now()) @db.Timestamptz(6)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  user AuthUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+  goal Goal     @relation(fields: [goalId, userId], references: [id, userId], onDelete: Cascade, map: "goal_movements_goal_fkey")
+
+  @@index([goalId, userId, date(sort: Desc)], map: "goal_movements_goal_date_idx")
+  @@index([userId, date(sort: Desc)], map: "goal_movements_user_date_idx")
+  @@map("goal_movements")
+  @@schema("public")
+}

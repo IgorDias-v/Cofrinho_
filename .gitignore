@@ -1,0 +1,25 @@
+# dependências e build
+node_modules
+.next
+out
+build
+*.tsbuildinfo
+next-env.d.ts
+
+# variáveis de ambiente — NUNCA sobem para o GitHub
+.env
+.env.*
+!.env.example
+
+# Vercel / Supabase local
+.vercel
+supabase/.temp
+supabase/.branches
+
+# sistema
+.DS_Store
+npm-debug.log*
+
+# Storybook
+storybook-static
+*storybook.log

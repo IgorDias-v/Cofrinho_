@@ -1,0 +1,40 @@
+import { Meta } from "@storybook/addon-docs/blocks";
+
+<Meta title="Introdução" />
+
+# Cofrinho · Design System
+
+Documentação viva dos componentes do app. Tudo aqui é o **código real** de `src/` — não há cópias.
+
+## Como navegar
+
+| Seção | O que tem |
+|---|---|
+| **Fundamentos** | Tokens (primitivos e semânticos), ícones, marca. |
+| **Componentes** | Peças de `src/components` com controles (aba *Controls*) e acessibilidade (aba *Accessibility*). |
+| **Aplicação › Folhas (sheets)** | Cada folha de `src/sheets/Sheets.tsx` aberta sobre a Home. |
+| **Aplicação › Telas** | O app inteiro e navegável, em mobile (390) e desktop (1440). |
+
+## Tokens
+
+- Fonte única: `design-tokens/tokens.json` → gera `TOKENS.md` e `tokens.css` com `node scripts/build-tokens.mjs`.
+- No Figma (arquivo W5): coleções **primitives** e **semantic**.
+- Nome kebab-case: `color/bg/canvas` → `var(--color-bg-canvas)`.
+- Componentes devem usar **só tokens semânticos**.
+
+## Superfícies
+
+O app tem duas superfícies: **papel** (`color/bg/paper`, topo claro) e **canvas** (`color/bg/canvas`, conteúdo escuro).
+Componentes com `tone="light"` vivem no papel; `tone="dark"`, no escuro. Use a barra de *Backgrounds* para trocar.
+
+## Dados
+
+Componentes que leem a store usam a conta de demonstração com dados fixos (`StoreProvider initial`):
+nada é lido nem gravado no `localStorage` do app.
+
+## Rodar
+
+```bash
+npm run storybook        # http://localhost:6006
+npm run build-storybook  # gera storybook-static/
+```
